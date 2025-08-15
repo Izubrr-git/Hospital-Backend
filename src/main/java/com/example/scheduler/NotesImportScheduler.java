@@ -1,6 +1,7 @@
-package com.example;
+package com.example.scheduler;
 
-import com.example.Services.ImportService;
+import com.example.model.ImportStatistics;
+import com.example.service.EnhancedImportService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -8,10 +9,10 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 public class NotesImportScheduler {
-    private final ImportService importService;
+    private final EnhancedImportService importService;
 
-    public NotesImportScheduler(ImportService importService) {
-        this.importService = importService;
+    public NotesImportScheduler(EnhancedImportService enhancedImportService) {
+        this.importService = enhancedImportService;
     }
 
     @Scheduled(cron = "0 15 */2 * * *") // Каждые 2 часа в 15 минут

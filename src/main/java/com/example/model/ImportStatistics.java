@@ -1,4 +1,4 @@
-package com.example;
+package com.example.model;
 
 import lombok.Data;
 
@@ -9,10 +9,10 @@ import java.time.LocalDateTime;
 public class ImportStatistics {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private int createdCount = 0;
-    private int updatedCount = 0;
-    private int skippedCount = 0;
-    private int errorCount = 0;
+    int createdCount = 0;
+    int updatedCount = 0;
+    int skippedCount = 0;
+    int errorCount = 0;
     private boolean hasCriticalError = false;
 
     public void incrementCreatedCount() { createdCount++; }

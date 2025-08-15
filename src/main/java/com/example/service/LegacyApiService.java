@@ -1,9 +1,9 @@
-package com.example.Services;
+package com.example.service;
 
-import com.example.DTO.LegacyClient;
-import com.example.DTO.LegacyNote;
-import com.example.DTO.NotesRequest;
-import com.example.LegacyApiConfig;
+import com.example.dto.LegacyClient;
+import com.example.dto.LegacyNote;
+import com.example.dto.NotesRequest;
+import com.example.config.LegacyApiConfig;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
