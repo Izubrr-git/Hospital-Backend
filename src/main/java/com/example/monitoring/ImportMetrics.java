@@ -4,7 +4,6 @@ import com.example.model.ImportStatistics;
 import io.micrometer.core.instrument.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -21,8 +20,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ImportMetrics {
 
     private final MeterRegistry meterRegistry;
-
-    // Counters
     private final Counter importStartedCounter;
     private final Counter importCompletedCounter;
     private final Counter importErrorCounter;
@@ -31,10 +28,8 @@ public class ImportMetrics {
     private final Counter notesSkippedCounter;
     private final Counter usersCreatedCounter;
 
-    // Timers - используем один базовый таймер
     private final Timer importDurationTimer;
 
-    // Gauges - храним атомарные значения
     private final AtomicLong lastImportTimestamp = new AtomicLong(0);
     private final AtomicLong activeImportsCount = new AtomicLong(0);
     private final AtomicLong totalNotesProcessed = new AtomicLong(0);
@@ -43,7 +38,6 @@ public class ImportMetrics {
     public ImportMetrics(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
 
-        // Инициализация счетчиков
         this.importStartedCounter = Counter.builder("notes_import_started_total")
                 .description("Общее количество запущенных операций импорта")
                 .register(meterRegistry);
@@ -72,12 +66,10 @@ public class ImportMetrics {
                 .description("Общее количество созданных пользователей")
                 .register(meterRegistry);
 
-        // Инициализация таймеров
         this.importDurationTimer = Timer.builder("notes_import_duration_seconds")
                 .description("Время выполнения операций импорта")
                 .register(meterRegistry);
 
-        // Инициализация gauge метрик - ПРАВИЛЬНЫЙ СПОСОБ
         meterRegistry.gauge("notes_import_last_execution_timestamp",
                 Tags.of(Tag.of("description", "Timestamp последнего выполнения импорта")),
                 lastImportTimestamp,
@@ -99,7 +91,6 @@ public class ImportMetrics {
                 AtomicLong::get);
     }
 
-    // Методы для записи метрик
 
     public void recordImportStarted() {
         importStartedCounter.increment();
@@ -148,14 +139,11 @@ public class ImportMetrics {
         log.debug("Записана метрика: пользователь создан");
     }
 
-    // ИСПРАВЛЕННЫЕ МЕТОДЫ ДЛЯ TIMER SAMPLE
-
     public Timer.Sample startApiCallTimer() {
         return Timer.start(meterRegistry);
     }
 
     public void recordApiCall(Timer.Sample sample, String operation, boolean success) {
-        // Правильный способ для Micrometer
         Timer apiTimer = Timer.builder("notes_import_api_call_duration_seconds")
                 .description("Время выполнения вызовов Legacy API")
                 .tag("operation", operation)
@@ -171,7 +159,6 @@ public class ImportMetrics {
     }
 
     public void recordDatabaseOperation(Timer.Sample sample, String operation, boolean success) {
-        // Правильный способ для Micrometer
         Timer dbTimer = Timer.builder("notes_import_database_operation_duration_seconds")
                 .description("Время выполнения операций с базой данных")
                 .tag("operation", operation)
@@ -182,7 +169,6 @@ public class ImportMetrics {
         log.debug("Записана метрика БД операции: операция='{}', успех={}", operation, success);
     }
 
-    // АЛЬТЕРНАТИВНЫЙ ПОДХОД - используем кэшированные таймеры
     private final Map<String, Timer> apiTimers = new HashMap<>();
     private final Map<String, Timer> dbTimers = new HashMap<>();
 
@@ -214,10 +200,8 @@ public class ImportMetrics {
         log.debug("Записана кэшированная метрика БД: операция='{}', успех={}", operation, success);
     }
 
-    // Методы для получения текущих значений метрик
-
     public double getLastImportTimestamp() {
-        return lastImportTimestamp.get() / 1000.0; // Конвертируем в секунды для Prometheus
+        return lastImportTimestamp.get() / 1000.0;
     }
 
     public double getActiveImportsCount() {
@@ -232,12 +216,9 @@ public class ImportMetrics {
         return totalErrorsCount.get();
     }
 
-    // Методы для получения статистики
-
     public ImportStatistics getCurrentStatistics() {
         ImportStatistics stats = new ImportStatistics();
 
-        // Получаем значения счетчиков
         stats.setCreatedCount((int) notesCreatedCounter.count());
         stats.setUpdatedCount((int) notesUpdatedCounter.count());
         stats.setSkippedCount((int) notesSkippedCounter.count());
@@ -270,16 +251,12 @@ public class ImportMetrics {
         return metrics;
     }
 
-    // Периодическое логирование статистики
-
-    @Scheduled(fixedRate = 300000) // Каждые 5 минут
+    @Scheduled(fixedRate = 300000)
     @ConditionalOnProperty(name = "notes.import.enable-detailed-logging", havingValue = "true")
     public void logPeriodicStatistics() {
         Map<String, Double> metrics = getAllMetrics();
         log.info("Статистика импорта: {}", metrics);
     }
-
-    // Методы для очистки кэшей (для production)
 
     public void clearTimerCaches() {
         apiTimers.clear();

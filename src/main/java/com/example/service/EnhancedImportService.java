@@ -62,7 +62,6 @@ public class EnhancedImportService {
         try {
             log.info("Начинаем импорт заметок из старой системы");
 
-            // Получаем всех активных пациентов
             List<PatientProfile> activePatients = patientRepository.findActivePatients();
             log.info("Найдено {} активных пациентов", activePatients.size());
 
@@ -72,15 +71,12 @@ public class EnhancedImportService {
                 return stats;
             }
 
-            // Получаем всех клиентов из старой системы
             List<LegacyClient> legacyClients = legacyApiService.getAllClients();
             log.info("Получено {} клиентов из старой системы", legacyClients.size());
 
-            // Создаем мапу для быстрого поиска клиентов по GUID
             Map<String, LegacyClient> clientMap = legacyClients.stream()
                     .collect(Collectors.toMap(LegacyClient::getGuid, Function.identity()));
 
-            // Обрабатываем пациентов батчами
             List<List<PatientProfile>> patientBatches = partitionList(activePatients, config.getPatientBatchSize());
 
             for (List<PatientProfile> batch : patientBatches) {
@@ -90,7 +86,6 @@ public class EnhancedImportService {
             stats.setEndTime(LocalDateTime.now());
             log.info("Импорт завершен. Статистика: {}", stats);
 
-            // Записываем метрики
             metrics.recordImportCompleted(stats.getDuration(), !stats.isHasCriticalError());
             metrics.recordNotesProcessed(stats.getCreatedCount(), stats.getUpdatedCount(), stats.getSkippedCount());
 
@@ -130,7 +125,6 @@ public class EnhancedImportService {
 
     private void importNotesForPatient(PatientProfile patient, LegacyClient legacyClient,
                                        ImportStatistics stats) throws Exception {
-        // Получаем заметки за указанный период
         LocalDate dateTo = LocalDate.now();
         LocalDate dateFrom = dateTo.minusDays(config.getDaysToImport());
 
@@ -159,7 +153,6 @@ public class EnhancedImportService {
     @Transactional
     public void importSingleNote(PatientProfile patient, LegacyNote legacyNote,
                                  ImportStatistics stats) {
-        // Валидация входных данных
         if (legacyNote.getGuid() == null || legacyNote.getGuid().trim().isEmpty()) {
             log.warn("Пропускаем заметку без GUID для пациента {}", patient.getId());
             stats.incrementSkippedCount();
@@ -172,21 +165,16 @@ public class EnhancedImportService {
             return;
         }
 
-        // Ищем существующую заметку
         Optional<PatientNote> existingNote = noteRepository.findByLegacyNoteGuid(legacyNote.getGuid());
 
-        // Получаем или создаем пользователя
         CompanyUser user = getOrCreateUser(legacyNote.getLoggedUser());
 
-        // Парсим даты
         LocalDateTime createdDateTime = parseDateTime(legacyNote.getCreatedDateTime());
         LocalDateTime modifiedDateTime = parseDateTime(legacyNote.getModifiedDateTime());
 
         if (existingNote.isPresent()) {
-            // Обновляем существующую заметку
             PatientNote note = existingNote.get();
 
-            // Проверяем, какая версия новее
             if (modifiedDateTime.isAfter(note.getLastModifiedDateTime())) {
                 note.setNote(legacyNote.getComments());
                 note.setLastModifiedDateTime(modifiedDateTime);
@@ -199,7 +187,6 @@ public class EnhancedImportService {
                 log.debug("Заметка {} пропущена - версия в БД новее", legacyNote.getGuid());
             }
         } else {
-            // Создаем новую заметку
             PatientNote newNote = new PatientNote();
             newNote.setPatient(patient);
             newNote.setNote(legacyNote.getComments());
@@ -237,7 +224,6 @@ public class EnhancedImportService {
         }
 
         try {
-            // Убираем часовой пояс если есть (CDT, EST, etc.)
             String cleanDateTime = dateTimeString.trim().replaceAll(" [A-Z]{3}$", "");
             return LocalDateTime.parse(cleanDateTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         } catch (Exception e) {
@@ -258,8 +244,6 @@ public class EnhancedImportService {
         }
         return partitions;
     }
-
-    // Дополнительные методы для статистики и управления
 
     public long getTotalNotesCount() {
         return noteRepository.count();
@@ -283,12 +267,10 @@ public class EnhancedImportService {
         long importedNotes = getImportedNotesCount();
         LocalDateTime lastImport = getLastImportTime();
 
-        // Подсчитываем заметки за последние сутки
         LocalDateTime yesterDay = LocalDateTime.now().minusDays(1);
         long recentImports = noteRepository.countImportedSince(yesterDay);
 
         stats.setCreatedCount((int) recentImports);
-        // Дополнительные поля можно установить здесь
 
         log.info("Статистика: всего заметок={}, импортированных={}, за последние сутки={}",
                 totalNotes, importedNotes, recentImports);
@@ -296,7 +278,6 @@ public class EnhancedImportService {
         return stats;
     }
 
-    // Метод для импорта конкретного пациента (для отладки)
     @Transactional
     public ImportStatistics importSpecificPatient(Long patientId) {
         ImportStatistics stats = new ImportStatistics();
@@ -340,13 +321,10 @@ public class EnhancedImportService {
         return stats;
     }
 
-    // Метод очистки старых импортированных записей
     @Transactional
     public int cleanupOldImportedNotes(int daysToKeep) {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(daysToKeep);
 
-        // Можно добавить удаление старых записей если нужно
-        // Пока что только логируем
         long oldNotesCount = noteRepository.countImportedSince(cutoffDate);
         log.info("Найдено {} импортированных заметок старше {} дней", oldNotesCount, daysToKeep);
 

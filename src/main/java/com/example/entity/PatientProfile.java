@@ -32,12 +32,10 @@ public class PatientProfile {
     @Column(name = "status_id", nullable = false)
     private Short statusId;
 
-    // Метод для проверки активного статуса
     public boolean isActive() {
         return statusId != null && Arrays.asList((short)200, (short)210, (short)230).contains(statusId);
     }
 
-    // Метод для получения списка старых GUID
     public List<String> getOldClientGuids() {
         if (oldClientGuid == null || oldClientGuid.trim().isEmpty()) {
             return Collections.emptyList();

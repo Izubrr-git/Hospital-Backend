@@ -56,14 +56,12 @@ class ImportServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Настройка mock конфигурации
         when(config.getDaysToImport()).thenReturn(30);
         when(config.getPatientBatchSize()).thenReturn(100);
     }
 
     @Test
     void shouldCreateNewNoteWhenNotExists() throws Exception {
-        // Given
         PatientProfile patient = createTestPatient();
         LegacyClient legacyClient = createTestLegacyClient();
         LegacyNote legacyNote = createTestLegacyNote();
@@ -77,10 +75,8 @@ class ImportServiceTest {
         when(noteRepository.findByLegacyNoteGuid(legacyNote.getGuid()))
                 .thenReturn(Optional.empty());
 
-        // When
         ImportStatistics result = importService.performImport();
 
-        // Then
         assertThat(result.getCreatedCount()).isEqualTo(1);
         assertThat(result.getErrorCount()).isEqualTo(0);
         assertThat(result.isHasCriticalError()).isFalse();
@@ -111,10 +107,8 @@ class ImportServiceTest {
         when(noteRepository.findByLegacyNoteGuid(legacyNote.getGuid()))
                 .thenReturn(Optional.of(existingNote));
 
-        // When
         ImportStatistics result = importService.performImport();
 
-        // Then
         assertThat(result.getUpdatedCount()).isEqualTo(1);
         assertThat(result.getCreatedCount()).isEqualTo(0);
 
@@ -125,7 +119,6 @@ class ImportServiceTest {
 
     @Test
     void shouldSkipNoteWhenLocalIsNewer() throws Exception {
-        // Given
         PatientProfile patient = createTestPatient();
         LegacyClient legacyClient = createTestLegacyClient();
         LegacyNote legacyNote = createTestLegacyNote();
@@ -143,10 +136,8 @@ class ImportServiceTest {
         when(noteRepository.findByLegacyNoteGuid(legacyNote.getGuid()))
                 .thenReturn(Optional.of(existingNote));
 
-        // When
         ImportStatistics result = importService.performImport();
 
-        // Then
         assertThat(result.getSkippedCount()).isEqualTo(1);
         assertThat(result.getUpdatedCount()).isEqualTo(0);
         assertThat(result.getCreatedCount()).isEqualTo(0);
@@ -156,7 +147,6 @@ class ImportServiceTest {
 
     @Test
     void shouldCreateUserWhenNotExists() throws Exception {
-        // Given
         PatientProfile patient = createTestPatient();
         LegacyClient legacyClient = createTestLegacyClient();
         LegacyNote legacyNote = createTestLegacyNote();
@@ -170,23 +160,18 @@ class ImportServiceTest {
         when(userRepository.save(any(CompanyUser.class))).thenReturn(newUser);
         when(noteRepository.findByLegacyNoteGuid(any())).thenReturn(Optional.empty());
 
-        // When
         importService.performImport();
 
-        // Then
         verify(userRepository).save(argThat(user ->
                 "testuser".equals(user.getLogin())));
     }
 
     @Test
     void shouldHandleEmptyActivePatients() throws Exception {
-        // Given
         when(patientRepository.findActivePatients()).thenReturn(Collections.emptyList());
 
-        // When
         ImportStatistics result = importService.performImport();
 
-        // Then
         assertThat(result.getCreatedCount()).isEqualTo(0);
         assertThat(result.getUpdatedCount()).isEqualTo(0);
         assertThat(result.getSkippedCount()).isEqualTo(0);
@@ -198,24 +183,20 @@ class ImportServiceTest {
 
     @Test
     void shouldHandleLegacyApiError() throws Exception {
-        // Given
         when(patientRepository.findActivePatients()).thenReturn(List.of(createTestPatient()));
         when(legacyApiService.getAllClients()).thenThrow(new RuntimeException("API недоступен"));
 
-        // When
         ImportStatistics result = importService.performImport();
 
-        // Then
         assertThat(result.isHasCriticalError()).isTrue();
         verify(metrics).recordImportError("critical_error");
     }
 
     @Test
     void shouldValidateNoteData() {
-        // Given
         PatientProfile patient = createTestPatient();
         LegacyNote invalidNote = new LegacyNote();
-        invalidNote.setGuid(null); // Невалидный GUID
+        invalidNote.setGuid(null);
         invalidNote.setComments("Valid comment");
         invalidNote.setLoggedUser("testuser");
         invalidNote.setCreatedDateTime("2023-01-01 10:00:00");
@@ -223,38 +204,32 @@ class ImportServiceTest {
 
         ImportStatistics stats = new ImportStatistics();
 
-        // When
         importService.importSingleNote(patient, invalidNote, stats);
 
-        // Then
         assertThat(stats.getSkippedCount()).isEqualTo(1);
         verify(noteRepository, never()).save(any());
     }
 
     @Test
     void shouldHandleEmptyComments() {
-        // Given
         PatientProfile patient = createTestPatient();
         LegacyNote emptyNote = new LegacyNote();
         emptyNote.setGuid("valid-guid");
-        emptyNote.setComments(""); // Пустой комментарий
+        emptyNote.setComments("");
         emptyNote.setLoggedUser("testuser");
         emptyNote.setCreatedDateTime("2023-01-01 10:00:00");
         emptyNote.setModifiedDateTime("2023-01-01 10:00:00");
 
         ImportStatistics stats = new ImportStatistics();
 
-        // When
         importService.importSingleNote(patient, emptyNote, stats);
 
-        // Then
         assertThat(stats.getSkippedCount()).isEqualTo(1);
         verify(noteRepository, never()).save(any());
     }
 
     @Test
     void shouldHandleInvalidDates() {
-        // Given
         PatientProfile patient = createTestPatient();
         LegacyNote noteWithInvalidDate = createTestLegacyNote();
         noteWithInvalidDate.setCreatedDateTime("invalid-date");
@@ -266,10 +241,8 @@ class ImportServiceTest {
 
         ImportStatistics stats = new ImportStatistics();
 
-        // When
         importService.importSingleNote(patient, noteWithInvalidDate, stats);
 
-        // Then
         assertThat(stats.getCreatedCount()).isEqualTo(1);
 
         ArgumentCaptor<PatientNote> noteCaptor = ArgumentCaptor.forClass(PatientNote.class);
@@ -278,22 +251,18 @@ class ImportServiceTest {
         PatientNote savedNote = noteCaptor.getValue();
         assertThat(savedNote.getCreatedDateTime()).isNotNull();
         assertThat(savedNote.getLastModifiedDateTime()).isNotNull();
-        // Даты должны быть установлены в текущее время при ошибке парсинга
     }
 
     @Test
     void shouldGetImportStatistics() {
-        // Given
         when(noteRepository.count()).thenReturn(1000L);
         when(noteRepository.countImportedNotes()).thenReturn(800L);
         when(noteRepository.findTopByLegacyNoteGuidIsNotNullOrderByLastModifiedDateTimeDesc())
                 .thenReturn(Optional.of(createTestPatientNote()));
         when(noteRepository.countImportedSince(any())).thenReturn(50L);
 
-        // When
         ImportStatistics stats = importService.getImportStatistics();
 
-        // Then
         assertThat(stats).isNotNull();
         verify(noteRepository).count();
         verify(noteRepository).countImportedNotes();
@@ -301,7 +270,6 @@ class ImportServiceTest {
 
     @Test
     void shouldImportSpecificPatient() throws Exception {
-        // Given
         Long patientId = 1L;
         PatientProfile patient = createTestPatient();
         patient.setId(patientId);
@@ -316,47 +284,38 @@ class ImportServiceTest {
         when(userRepository.findByLogin(any())).thenReturn(Optional.of(createTestUser()));
         when(noteRepository.findByLegacyNoteGuid(any())).thenReturn(Optional.empty());
 
-        // When
         ImportStatistics result = importService.importSpecificPatient(patientId);
 
-        // Then
         assertThat(result.getCreatedCount()).isEqualTo(1);
         assertThat(result.isHasCriticalError()).isFalse();
     }
 
     @Test
     void shouldFailImportForNonExistentPatient() {
-        // Given
         Long nonExistentPatientId = 999L;
         when(patientRepository.findById(nonExistentPatientId)).thenReturn(Optional.empty());
 
-        // When
         ImportStatistics result = importService.importSpecificPatient(nonExistentPatientId);
 
-        // Then
         assertThat(result.isHasCriticalError()).isTrue();
         assertThat(result.getErrorCount()).isEqualTo(1);
     }
 
     @Test
     void shouldFailImportForInactivePatient() {
-        // Given
         Long patientId = 1L;
         PatientProfile inactivePatient = createTestPatient();
         inactivePatient.setId(patientId);
-        inactivePatient.setStatusId((short) 100); // Неактивный статус
+        inactivePatient.setStatusId((short) 100);
 
         when(patientRepository.findById(patientId)).thenReturn(Optional.of(inactivePatient));
 
-        // When
         ImportStatistics result = importService.importSpecificPatient(patientId);
 
-        // Then
         assertThat(result.isHasCriticalError()).isTrue();
         assertThat(result.getErrorCount()).isEqualTo(1);
     }
 
-    // Helper методы
     private PatientProfile createTestPatient() {
         PatientProfile patient = new PatientProfile();
         patient.setId(1L);

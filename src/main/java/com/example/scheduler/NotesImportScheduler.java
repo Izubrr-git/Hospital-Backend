@@ -15,7 +15,7 @@ public class NotesImportScheduler {
         this.importService = enhancedImportService;
     }
 
-    @Scheduled(cron = "0 15 */2 * * *") // Каждые 2 часа в 15 минут
+    @Scheduled(cron = "0 15 */2 * * *")
     public void scheduleImport() {
         log.info("Запуск планового импорта заметок");
         try {

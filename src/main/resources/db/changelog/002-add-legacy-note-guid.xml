@@ -7,20 +7,20 @@
 
     <changeSet id="002-add-legacy-note-guid" author="developer">
 
-        <!-- Добавляем поле для хранения GUID из старой системы -->
+        <!-- GUID из старой системы -->
         <addColumn tableName="patient_note">
             <column name="legacy_note_guid" type="VARCHAR(255)">
                 <constraints nullable="true"/>
             </column>
         </addColumn>
 
-        <!-- Добавляем уникальный индекс -->
+        <!-- Уникальный индекс -->
         <addUniqueConstraint
                 tableName="patient_note"
                 columnNames="legacy_note_guid"
                 constraintName="uk_patient_note_legacy_guid"/>
 
-        <!-- Добавляем обычные индексы для производительности -->
+        <!-- Обычные индексы для производительности -->
         <createIndex tableName="patient_profile" indexName="idx_patient_profile_status">
             <column name="status_id"/>
         </createIndex>
