@@ -270,19 +270,6 @@ public class ImportMetrics {
         return metrics;
     }
 
-    // Методы для сброса метрик (для тестирования)
-
-    @EventListener
-    @ConditionalOnProperty(name = "spring.profiles.active", havingValue = "test")
-    public void resetMetricsForTesting() {
-        log.warn("Сброс метрик для тестирования");
-
-        activeImportsCount.set(0);
-        totalNotesProcessed.set(0);
-        totalErrorsCount.set(0);
-        lastImportTimestamp.set(0);
-    }
-
     // Периодическое логирование статистики
 
     @Scheduled(fixedRate = 300000) // Каждые 5 минут

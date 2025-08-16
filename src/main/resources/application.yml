@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: hospital-backend-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/new_system?serverTimezone=UTC
+    username: hospital_user
+    password: hospital_pass
+
+  jpa:
+    show-sql: true
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+  jackson:
+    time-zone: UTC
+
+legacy:
+  api:
+    base-url: http://localhost:8080
+
+logging:
+  level:
+    com.example: INFO
